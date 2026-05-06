@@ -1,194 +1,212 @@
 # Video Script — Knapsack: GA vs DP
 
-**Target length:** ~10 minutes (8–12 acceptable).
-**Format:** Screen recording with voiceover. No talking-head needed unless you want one.
-**Goal:** Hit every rubric line — running code, both algorithms demonstrated, report, meaningful analysis, conclusion, plus reflection.
+**Setup:** Two windows. Left/main = a terminal running `./demo.sh`. Right/second = this file, scrolled along as you go. No tab switching. The demo pauses after every section — press any key to advance when you're ready.
 
-**What to have open before you hit record (in order, on tabs / windows you can alt-tab between):**
+**Recording:**
+1. Open a fresh terminal in `~/Projects/knapsack-ga-vs-dp/`
+2. Run `source .venv/bin/activate`
+3. Maximize the terminal, bump the font to 16pt+ (the readers of your video will thank you)
+4. Hit record
+5. Run `./demo.sh`
+6. Read the script section by section. Press any key when you're ready to move on.
 
-1. **Browser** — `https://github.com/Positivitty/knapsack-ga-vs-dp` (the README renders nicely there)
-2. **Editor** — VS Code or whatever, with these files in tabs in this order:
-   - `ga/algorithm.py`
-   - `ga/operators.py`
-   - `dp/knapsack_dp.py`
-   - `README.md` (preview pane if possible)
-3. **Terminal** — already in `~/Projects/knapsack-ga-vs-dp/` with `.venv` activated. Pre-run `clear` so it starts clean.
-4. **Image viewer** — `results/runtime_vs_size.png` and `results/quality_vs_size.png` open and ready
+Target length: ~10 minutes. Anything from 8 to 12 is fine.
 
 ---
 
-## [0:00 — 0:30] Cold open
+## Section 1 — Banner (cold open)
 
-**[SHOW: Browser tab on GitHub README, scrolled to the top]**
+**On screen:** ASCII banner with project title.
 
-> Hey, I'm Noah Kerr. For our final reflection in algorithms class I built a head-to-head comparison of a **Genetic Algorithm** against **Dynamic Programming** on the **0/1 Knapsack Problem**, written in Python. Code, tests, and the full report are on GitHub at `Positivitty/knapsack-ga-vs-dp`. Over the next ten minutes I'll walk through the problem, both algorithms, the benchmark results, and what I learned.
+> Hey, I'm Noah Kerr. For our final reflection in algorithms class I built a head-to-head comparison of a **Genetic Algorithm** against **Dynamic Programming** on the **0/1 Knapsack Problem**, in Python. Code, tests, and the full report are on GitHub at `Positivitty/knapsack-ga-vs-dp`. Over the next ten minutes I'll walk through the problem, both algorithms, the benchmark results, and what I took away from the class.
+
+**[press key]**
 
 ---
 
-## [0:30 — 2:00] The problem and why it matters
+## Section 2 — The Problem
 
-**[SHOW: Scroll down to "The Problem" section of the README]**
+**On screen:** Problem statement — definition + four bullet points.
 
 > The 0/1 Knapsack Problem is this: you have `n` items, each with a weight and a value, and a knapsack with capacity `W`. Pick a subset of items that maximizes total value without exceeding the capacity. Each item is either fully taken or left behind — no fractions.
 
-> This problem matters because it's a **canonical NP-hard problem**. Every cargo-loading, budget-allocation, resource-scheduling problem you've ever heard of is a knapsack variant under the hood. And NP-hard means there is no known polynomial-time exact algorithm — so it's the perfect arena for comparing an exact approach against an approximate one.
+> This problem matters because it's a **canonical NP-hard problem**. Every cargo-loading, budget-allocation, resource-scheduling problem you've ever heard of is some variant of knapsack under the hood. NP-hard means there is no known polynomial-time exact algorithm, so it's the perfect arena for comparing an exact approach against an approximate one.
 
-> Specifically, Dynamic Programming solves it in `O(n × W)` — that looks polynomial but it's actually **pseudo-polynomial**. The runtime is linear in the *numeric value* of the capacity, not the number of bits. Double the capacity, double the runtime. That's the crack we're going to drive a Genetic Algorithm into.
+> Specifically, Dynamic Programming solves this in `O(n × W)` — that looks polynomial but it's actually **pseudo-polynomial**. Runtime is linear in the *numeric value* of the capacity, not the number of bits. Double the capacity, double the runtime. That's the crack we're going to drive a Genetic Algorithm into.
+
+**[press key]**
 
 ---
 
-## [2:00 — 4:00] Algorithm 1 — the Genetic Algorithm
+## Section 3 — GA Main Loop
 
-**[SHOW: Editor — `ga/algorithm.py` on screen]**
+**On screen:** `ga/algorithm.py` — full file.
 
-> The Genetic Algorithm is a population-based metaheuristic. Instead of enumerating the search space, you simulate evolution on a population of candidate solutions. Fit individuals reproduce, offspring mix and mutate, and over generations the population concentrates on high-quality regions.
+> This is my Genetic Algorithm. The Genetic Algorithm is a population-based metaheuristic — instead of enumerating the search space, you simulate evolution on a population of candidate solutions. Fit individuals reproduce, offspring mix and mutate, and over generations the population concentrates on high-quality regions of the search space.
 
-> Here's the structure. Every candidate solution is a length-`n` bitstring — bit `i` is 1 if item `i` is in the knapsack, 0 if it isn't. I'm using NumPy arrays so the whole population can be evaluated in one vectorized operation.
+> Up at the top is the configuration: population of 100, up to 500 generations, tournament size 3, crossover probability 0.7, mutation rate of 1 over n, elitism of 2, and an early stop if the global best hasn't improved in 100 generations. These are textbook starting values — I deliberately didn't hand-tune them, so the comparison stays fair.
 
-**[SHOW: Scroll to the main GA loop — `for gen in range(...)`]**
-
-> Each generation does five things:
+> Down in the main loop, every generation does five things:
 >
-> 1. **Elitism** — copy the top 2 individuals into the next generation unchanged. This guarantees the best-so-far never regresses.
-> 2. **Selection** — fill the rest of the parent pool by tournament selection: grab 3 random individuals, the fittest wins a slot. Repeat.
-> 3. **Crossover** — pair adjacent parents and mix them. I'm using uniform crossover at probability 0.7. For every bit, flip a coin to decide which parent it comes from.
-> 4. **Mutation** — flip every bit independently with probability `1/n`. So on average each child mutates one bit.
-> 5. **Evaluate** — score everyone with the fitness function.
+> One — **elitism**: the top 2 individuals get copied unchanged into the next generation. This guarantees the best-so-far never regresses.
+>
+> Two — **selection**: fill the rest of the parent pool by tournament selection.
+>
+> Three — **crossover**: mix adjacent parents to make children.
+>
+> Four — **mutation**: randomly flip bits in the children.
+>
+> Five — **evaluate**: score the new population.
 
-**[SHOW: Open `ga/genome.py`, scroll to the `fitness` function]**
+> If the global best improves, reset the stagnation counter. Otherwise increment it. When it hits the limit, break out early. That's the whole GA in about 90 lines.
 
-> The fitness function is the part that bakes in the problem constraint. If a chromosome is feasible — total weight under capacity — its fitness is the sum of selected values. If it's infeasible, fitness is **zero**. This is called a "death penalty" — overweight chromosomes have no offspring, so the population stays inside the feasible region.
-
-**[SHOW: Open `ga/operators.py` briefly, just to show the three operators side by side]**
-
-> Tournament select, uniform crossover, bit-flip mutate. That's the entire GA in three operators plus a main loop. The whole thing is around 100 lines.
-
-> **Complexity:** `O(G × P × n)` — generations times population times items. With my settings that's `500 × 100 × n`. **Memory:** `O(P × n)` — for n=500 that's 50,000 bits. Tiny.
+**[press key]**
 
 ---
 
-## [4:00 — 5:30] Algorithm 2 — Dynamic Programming
+## Section 4 — GA Operators
 
-**[SHOW: Editor — `dp/knapsack_dp.py`]**
+**On screen:** `ga/operators.py` — three functions.
 
-> Dynamic Programming is the textbook **exact** solver. Build a table `T[i][w]` where each cell holds the best achievable value using only the first `i` items with capacity `w`. The recurrence:
+> Three operators, three functions.
 
-**[SHOW: Highlight the `for i ... for w` loop and the max() line]**
+> **Tournament selection** grabs `k` random individuals from the population — I'm using k=3 — and the fittest one wins a parent slot. It's robust to weird fitness distributions and trivial to implement.
 
-> For each item, for each possible capacity, you decide: take this item and add its value to the best solution that uses the first `i-1` items with the leftover capacity, or don't take it and inherit the previous row's answer. Take whichever is bigger.
+> **Uniform crossover** pairs adjacent parents. With probability 0.7 we mix them: for every bit, flip a coin to decide which parent it comes from. Otherwise the children are exact copies. Uniform crossover mixes more aggressively than single-point crossover, which matters here because nearby bits in our genome aren't correlated — item ordering in the input is arbitrary.
 
-> The final answer is `T[n][W]`. Then I backtrack through the table to figure out *which* items were chosen.
+> **Bit-flip mutation** flips every bit independently with probability `p`. I'm using `p = 1/n`, so on average each child mutates exactly one bit.
 
-> **Complexity:** `O(n × W)` time, `O(n × W)` space. Provably optimal — DP is the ground truth I'm measuring the GA against. But that `W` term is the catch. For my n=500 instances, `W` is around 25,000, which means the table has 12.5 million cells. Push `W` into the millions and DP runs out of memory; the GA wouldn't blink.
+> All three are vectorized over the entire population using NumPy, so a generation costs about the same regardless of population size.
 
----
-
-## [5:30 — 7:00] Live demo — running the code
-
-**[SHOW: Terminal]**
-
-> Let me actually run this.
-
-**[TYPE: `python -m pytest -q`]**
-
-> First, the test suite — 28 tests, including a brute-force check that DP matches the true optimum on small instances and a check that the GA always returns a feasible solution.
-
-**[WAIT for "28 passed". Let it sit on screen for 2 seconds.]**
-
-> All passing. Now the benchmark.
-
-**[TYPE: `python run_benchmark.py --sizes 20,100,500 --trials 3`]**
-
-> I'm running n=20, n=100, and n=500 with 3 trials each — for the video I want a quick demo, but the full sweep in the README does 5 trials at five sizes up to 500.
-
-**[WAIT for it to finish. While it runs, narrate:]**
-
-> The harness generates a deterministic random instance, runs the GA, runs the DP, runs greedy, records value and runtime, repeats. DP gives me the optimum, so I can express the GA's solution as a percentage of optimal — that's the headline quality metric.
-
-**[WHEN it finishes, the summary table will be on screen. Pause.]**
-
-> There are the numbers. Let me pull this up in the README where I have the full sweep with prettier formatting.
+**[press key]**
 
 ---
 
-## [7:00 — 8:30] Results and analysis
+## Section 5 — GA Fitness
 
-**[SHOW: README "Results" section in browser]**
+**On screen:** `ga/genome.py` — fitness, decode, packing helpers.
 
-> The full sweep, 5 trials per size. Three things jump out.
+> The fitness function is the part that bakes in the problem constraint. For each chromosome we compute total weight and total value. If the chromosome is feasible — total weight is at most the capacity — its fitness is the sum of selected values. If it's infeasible, fitness is **zero**.
 
-**[POINT to the runtime column for n=20]**
+> This is called a "death penalty." Overweight chromosomes have no offspring, so the population stays inside the feasible region without any explicit repair logic. It's the simplest possible constraint handling, and I argue for it in the report — repair operators are more complex and harder to defend as fair when comparing to DP.
 
-> **First — DP is faster on small instances.** At n=20, DP finishes in a millisecond; the GA takes 27 milliseconds because of population overhead. DP is the right tool for tiny problems. No surprise.
+> Note the matrix multiplications — `population @ weights` computes total weight for every individual in one shot. The whole fitness function is three lines of NumPy.
 
-**[POINT to the n=200 row, then n=500]**
-
-> **Second — the curves cross.** At n=200, DP and GA are basically tied. At n=500, the GA finishes in 0.31 seconds — DP takes 0.84. The GA is **2.7 times faster than the optimal algorithm** at this scale, and growing.
-
-**[OPEN `runtime_vs_size.png` full screen]**
-
-> Here's the runtime curve on a log scale. DP's slope is steeper because both `n` and `W` are growing. The GA's slope is gentler because it doesn't depend on `W` at all — only on `n` and the hyperparameters.
-
-**[OPEN `quality_vs_size.png`]**
-
-> And here's quality. The GA finds the exact optimum at n=20 and n=50, then drifts down to about 99.4% of optimum at n=500.
-
-**[BACK to the README, scroll to the "Analysis" section]**
-
-> One honest finding worth calling out — **greedy was surprisingly competitive**. At n=500 it landed within 0.02% of the optimum. That's not the GA failing. It's because my random instances draw weights and values uniformly and independently, which makes greedy's value-per-weight heuristic almost ideal. On adversarial instances — correlated weights and values, or degenerate capacity ratios — greedy collapses while the GA holds up. I didn't construct those harder instances for this run, and I think the report is stronger for being upfront about that limitation.
-
-**[POINT to the memory paragraph]**
-
-> The unsung axis is memory. GA holds about 50,000 bits at n=500. DP allocates 12.5 million integer cells. **The GA uses 0.4% of DP's memory** at this scale, and the ratio gets worse for DP as `W` grows.
-
-**[Scroll to "Conclusion"]**
-
-> The conclusion lines up with what I expected going in. **Use DP** when n times W fits in memory and you need the proven optimum. **Use the GA** when W is large and you can tolerate one to two percent off optimum. **Use greedy** when fast and probably fine is the spec.
-
-> The deeper takeaway — and this connects to the rest of the class — is that "best algorithm" isn't a property of a problem in isolation. It's a property of the problem, the instance distribution, the resource budget, and your quality tolerance. DP is correct. GA is flexible. Greedy is fast. The right tool depends on which of those three matters most that day.
+**[press key]**
 
 ---
 
-## [8:30 — 10:00] Reflection
+## Section 6 — DP
 
-**[SHOW: A clean terminal, or the README scrolled to a neutral section. This is the talking part.]**
+**On screen:** `dp/knapsack_dp.py` — full file.
 
-> Quick reflection to close out.
+> This is the **exact** solver — Dynamic Programming. The textbook approach.
 
-> **What I learned in this class** — I came in thinking algorithms were a catalog of tricks you memorize. The real skill the class taught me is **head-to-head comparison**: take two candidates, predict which one wins and why, run them on the same inputs, and confront your prediction with the data. We did this with mergesort versus quicksort, with FIFO versus best-first branch-and-bound on knapsack, and now with GA versus DP. The pattern is the same every time, and that pattern — predict, measure, explain the gap between prediction and reality — is the actual algorithmic literacy.
+> Build a table where each cell `T[i][w]` holds the best achievable value using only the first `i` items with capacity `w`. The recurrence in the inner loop says: for the i-th item, you decide — take it and inherit `T[i-1][w - weight_i] + value_i`, or don't take it and inherit `T[i-1][w]`. Take whichever is bigger.
 
-> **My favorite thing I learned** was the realization that **a Genetic Algorithm is just search wearing a costume**. Once you peel back the biology vocabulary — chromosomes, fitness, mutation — what you're really doing is parallel local search with periodic recombination. That reframing made GAs feel less mystical and more like one more tool in the same toolbox as backtracking, branch-and-bound, and simulated annealing.
+> The optimum is `T[n][W]`, the bottom-right cell. The backtracking loop at the end walks the table backwards to figure out *which* items were chosen.
 
-> **What I'd do next** — two threads.
+> **Complexity:** `O(n × W)` time and `O(n × W)` space. Provably optimal — DP is the ground truth I'm measuring the GA against. But that `W` term is the catch. For my n=500 instances, capacity is around 25,000, so the table has 12.5 million cells. Push capacity into the millions and DP runs out of memory long before the GA would even feel it.
 
-> First, I want to revisit my **AviSim** project — that's a real-time aviation sensor processing system in C++ with a FACE-inspired modular architecture. There's a possible job lead at Tinker Air Force Base where AviSim is directly relevant, so polishing that is the top priority before graduation in May.
-
-> Second, I'd like to bolt a Genetic Algorithm onto **EntropyEngine** — a data efficiency analyzer I'm building. Right now it detects inefficiencies in datasets and suggests fixes manually. A GA could explore the space of possible data optimizations and converge on configurations a human wouldn't think to try. That's the natural next application of what I built today.
-
-> That's it. Code is at `github.com/Positivitty/knapsack-ga-vs-dp`. Thanks for watching.
-
-**[FADE / cut]**
+**[press key]**
 
 ---
+
+## Section 7 — Test suite
+
+**On screen:** `pytest -v` running 28 tests.
+
+> Real quick — the test suite. 28 tests covering correctness of both algorithms.
+
+> The most important ones are in `test_correctness.py` and `test_dp.py` — DP's output is checked against a brute-force solver on small instances, which proves the DP code is finding the actual optimum. The GA is checked to always return a feasible solution and to never exceed DP's optimum. The operator tests pin down edge-case behavior at probability zero and probability one.
+
+> All passing. So when you see numbers in the next section, you can trust them.
+
+**[press key]**
+
+---
+
+## Section 8 — Benchmark sweep
+
+**On screen:** `python run_benchmark.py` running. Takes ~25–30 seconds. Talk through it.
+
+> And here's the actual benchmark — five sizes, five trials each, all three algorithms on every instance.
+
+> The harness generates a deterministic random knapsack instance from a seed, runs the GA, runs DP, runs greedy, records value and runtime, then repeats. Because DP gives the optimum, I can express the GA's solution as a percentage of optimal — that's the headline quality metric.
+
+> While it runs — a quick word on what to expect. I predicted DP would win on small `n` because exact algorithms have no per-individual overhead, and the GA would overtake DP at large `n` because GA scales linearly in `n` while DP scales in `n × W`, and `W` here grows with `n`.
+
+> Pause for whatever the benchmark is finishing up. The summary table at the end is sorted by size and algorithm. Each row shows mean value, mean quality as a percent of optimum, mean runtime in seconds, and for the GA, the mean number of generations actually used before early-stop kicked in.
+
+> Look at the n=20 row — both DP and GA find the exact optimum, but DP does it in a millisecond while the GA takes about 27. DP wins on tiny problems, no surprise.
+
+> Now look at n=500. The GA finishes in 0.31 seconds. DP takes 0.84. **The GA is 2.7 times faster than the optimal algorithm at this scale**, and it's still delivering 99.4% of optimal value.
+
+> Greedy — the third row in each group — is essentially free everywhere. I'll come back to that in a second.
+
+**[press key]**
+
+---
+
+## Section 9 — Results + reflection (outro)
+
+**On screen:** Outro card with headline numbers and file paths.
+
+> So here's the full story.
+
+> **Runtime** — DP wins on small instances, the GA crosses over between n=200 and n=500, and from n=500 onward the gap widens. The runtime plot makes this obvious — DP has a steeper slope on the log scale because both `n` and `W` are growing, while the GA's slope is gentler because it doesn't depend on `W` at all.
+
+> **Quality** — the GA finds the exact optimum at n=20 and n=50, then drifts down to about 99.4% of optimum at n=500. That's not the GA failing; it's exactly what you'd expect from a fixed hyperparameter budget against a growing search space.
+
+> **The honest finding I want to call out** — greedy was surprisingly competitive on these instances. It got within 0.02% of optimum at n=500, beating my GA on quality. That's not a flaw in the GA — it's a property of how I generated the instances. Weights and values were independently uniform, which makes the value-per-weight heuristic almost ideal. On adversarial instances — correlated weights and values, or pathological capacity ratios — greedy can be arbitrarily bad while the GA holds up. I didn't build those harder instances for this run, but I think the report is stronger for being upfront about it.
+
+> **Memory** is the unsung axis. At n=500, the GA holds about 50,000 bits. DP allocates 12.5 million integer cells. **The GA uses about 0.4% of DP's memory** at this scale, and the ratio gets dramatically worse for DP as capacity grows.
+
+> **The conclusion**: use DP when `n × W` fits comfortably in memory and you need the proven optimum. Use the GA when `W` is large and you can tolerate one to two percent off optimum. Use greedy when "fast and probably fine" is the spec.
+
+> **Reflection** — I came into this class thinking algorithms were a catalog of tricks you memorize. The real skill the class taught me is **head-to-head comparison**: take two candidates, predict which one wins and why, run them on the same inputs, then confront your prediction with the data. We did this with mergesort versus quicksort, with FIFO versus best-first branch-and-bound on knapsack, and now with GA versus DP. The pattern is the same every time — predict, measure, explain the gap — and that pattern is the actual algorithmic literacy.
+
+> My **favorite thing I learned** was the realization that **a Genetic Algorithm is just search wearing a costume**. Once you peel back the biology vocabulary — chromosomes, fitness, mutation — what's actually happening is parallel local search with periodic recombination. That reframing made GAs feel less mystical and more like one more tool in the same toolbox as backtracking, branch-and-bound, and simulated annealing.
+
+> **What I'd do next** — two threads. First, polish my **AviSim** project — that's a real-time aviation sensor processing system in C++ with a FACE-inspired modular architecture. There's a possible job opportunity at Tinker Air Force Base where AviSim is directly relevant, so that's the top priority before I graduate in May. Second, I'd like to bolt a Genetic Algorithm onto **EntropyEngine** — a data efficiency analyzer I'm building. Right now it detects inefficiencies and suggests fixes by hand. A GA could explore the space of possible data optimizations and converge on configurations a human wouldn't think to try. That's the natural next application of what I built today.
+
+> Code's at `github.com/Positivitty/knapsack-ga-vs-dp`. Thanks for watching.
+
+**[press key — clear screen — stop recording]**
+
+---
+
+## Cheat sheet
+
+| # | What's on screen | Roughly how long |
+|---|---|---|
+| 1 | Banner | 0:30 |
+| 2 | Problem statement | 1:00 |
+| 3 | `ga/algorithm.py` | 1:30 |
+| 4 | `ga/operators.py` | 0:45 |
+| 5 | `ga/genome.py` | 0:45 |
+| 6 | `dp/knapsack_dp.py` | 1:00 |
+| 7 | pytest output | 0:30 |
+| 8 | benchmark running | 1:30 (track it — sweep takes ~25s) |
+| 9 | outro card + reflection | 2:30 |
+
+That sums to ~10 minutes. If you blow past that on any section, just trim the next one.
 
 ## Rubric self-check
 
 | Criterion | Where it's covered |
 |---|---|
-| Running code (25) | Live `pytest` and `run_benchmark.py` execution at 5:30. |
-| First algorithm demonstrated (25) | GA walkthrough at 2:00 + GA columns in benchmark output. |
-| Second algorithm demonstrated (25) | DP walkthrough at 4:00 + DP columns in benchmark output. |
-| Report exists (25) | README on GitHub, shown throughout. |
-| Meaningful analysis (25) | Analysis section called out at 7:30, including honest greedy finding + memory discussion. |
-| Conclusion supported by report (25) | Conclusion read at 8:00, ties back to runtime/quality/memory data. |
-| Video explains results (50) | This whole script. |
+| Running code (25) | Sections 7 & 8 — pytest then live benchmark |
+| First algorithm (GA) demonstrated (25) | Sections 3, 4, 5 + GA columns in benchmark |
+| Second algorithm (DP) demonstrated (25) | Section 6 + DP columns in benchmark |
+| Report exists (25) | README on GitHub, called out in section 1 and section 9 |
+| Meaningful analysis (25) | Section 9 — runtime/quality/memory + honest greedy finding |
+| Conclusion supported (25) | Section 9 — three-way conclusion ties back to the data |
+| Video explains results (50) | The whole script |
 
----
+## Recording tips
 
-## Practical recording tips
-
-- **Record at 1080p minimum.** Make sure your editor font is at least 14pt — squinting at code on YouTube is the #1 reason people bounce.
-- **Don't speed up the demo.** When `pytest` finishes in 1.7 seconds, just say "all passing" and move on — you don't need to fill the silence.
-- **One take is fine.** If you flub a section, pause for two seconds and start the sentence over — you can cut the dead air in your editor. Trying to nail a single perfect take wastes hours.
-- **Audio matters more than video.** Use a wired mic if you have one, record in a quiet room, do a 10-second test before committing to the full take.
-- **Render and watch it back at 1.5x.** If it makes sense at 1.5x, your pacing is fine at 1x. If it's confusing at 1.5x, you're talking too fast.
+- **One take.** If you flub a sentence, pause two seconds and start the sentence over. Cut dead air in your editor afterward — way faster than retakes.
+- **Audio matters more than video.** Quiet room, wired mic if you have one. Do a 30-second test before committing.
+- **Don't race the demo.** The whole point of pause-on-keystroke is that you control pacing. If you need 20 seconds longer on a section, take it.
+- **Don't speed up the benchmark.** When pytest finishes in 1.7 seconds, just say "all passing" and hit the key. You don't need to fill silence.
