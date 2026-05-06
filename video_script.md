@@ -136,7 +136,31 @@ Target length: ~10 minutes. Anything from 8 to 12 is fine.
 
 ---
 
-## Section 9 — Results + reflection (outro)
+## Section 9 — Full results in Excel
+
+**On screen:** The CSV opened in Excel (or Numbers). The demo auto-opens it for you — just alt-tab to your spreadsheet app.
+
+> Okay, here's the actual data in Excel. Every row is one trial. 75 rows total — five sizes, five trials each, three algorithms.
+
+> Each row shows the size, the trial number, which algorithm ran, the value it found, the optimal value from DP, the quality as a percent of optimum, the runtime in seconds, and for the GA, how many generations it actually used before early-stop kicked in.
+
+> Couple things worth pointing at.
+
+> First — scroll up to the n=20 rows. Every GA run hits 100% quality. The GA is finding the exact optimum every time on small instances. That's what you'd hope.
+
+> Second — look at the generations-used column for the GA as `n` grows. At n=20 it's stopping early, around 110 generations. By n=500 it's hitting the 500-generation cap, because the search space is bigger and it can't fully converge in that budget. So one knob you could turn here is just letting the GA run longer at large sizes.
+
+> Third — runtime. Walk down the DP column. 0.001 seconds at n=20, then 0.008, 0.03, 0.14, 0.84. Each jump is roughly 4 to 6x. That's the `n × W` scaling showing itself.
+
+> Same exercise on the GA column — 0.027, 0.04, 0.07, 0.14, 0.31. Way slower than DP at small sizes, but it scales way more gently. By the bottom of the table the GA is faster than DP, and the gap would keep widening if I pushed `n` further.
+
+> Alright, switching back to the terminal.
+
+**[switch back to terminal, press key]**
+
+---
+
+## Section 10 — Reflection (outro)
 
 **On screen:** Outro card with headline numbers and file paths.
 
@@ -176,20 +200,21 @@ Target length: ~10 minutes. Anything from 8 to 12 is fine.
 | 6 | `dp/knapsack_dp.py` | 1:00 |
 | 7 | pytest output | 0:30 |
 | 8 | benchmark running | 1:30 (track it — sweep takes ~25s) |
-| 9 | outro card + reflection | 2:30 |
+| 9 | CSV walkthrough in Excel | 1:00 |
+| 10 | outro card + reflection | 2:30 |
 
-That sums to ~10 minutes. If you blow past that on any section, just trim the next one.
+That sums to ~11 minutes. If you blow past that on any section, just trim the next one.
 
 ## Rubric self-check
 
 | Criterion | Where it's covered |
 |---|---|
 | Running code (25) | Sections 7 & 8 — pytest then live benchmark |
-| First algorithm (GA) demonstrated (25) | Sections 3, 4, 5 + GA columns in benchmark |
-| Second algorithm (DP) demonstrated (25) | Section 6 + DP columns in benchmark |
-| Report exists (25) | README on GitHub, called out in section 1 and section 9 |
-| Meaningful analysis (25) | Section 9 — runtime/quality/memory + honest greedy finding |
-| Conclusion supported (25) | Section 9 — three-way conclusion ties back to the data |
+| First algorithm (GA) demonstrated (25) | Sections 3, 4, 5 + GA columns in benchmark + CSV |
+| Second algorithm (DP) demonstrated (25) | Section 6 + DP columns in benchmark + CSV |
+| Report exists (25) | README on GitHub, called out in section 1 and section 10 |
+| Meaningful analysis (25) | Sections 9 & 10 — per-trial CSV walkthrough + runtime/quality/memory + honest greedy finding |
+| Conclusion supported (25) | Section 10 — three-way conclusion ties back to the data |
 | Video explains results (50) | The whole script |
 
 ## Recording tips

@@ -84,7 +84,20 @@ section "BENCHMARK SWEEP — n ∈ {20, 50, 100, 200, 500}, 5 trials each"
 python run_benchmark.py
 pause
 
-# ─── 9. Outro ─────────────────────────────────────────────────────────
+# ─── 9. Excel walkthrough ─────────────────────────────────────────────
+section "FULL RESULTS — opening CSV in your spreadsheet app"
+echo "  Walk through the per-trial data, then come back here."
+echo
+csv=$(ls -t results/benchmark_*.csv 2>/dev/null | head -1)
+if [ -n "$csv" ]; then
+    echo "  Opening: $csv"
+    open "$csv" 2>/dev/null || echo "  (couldn't auto-open — open it manually)"
+else
+    echo "  (no CSV found — run benchmark first)"
+fi
+pause
+
+# ─── 10. Outro ────────────────────────────────────────────────────────
 section "RESULTS"
 cat <<'OUTRO'
   Headline:
